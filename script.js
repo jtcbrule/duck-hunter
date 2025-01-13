@@ -1,3 +1,41 @@
+/* Options */
+
+// image for bird, relative path
+const birdSrc = 'bird.png';
+
+// draw a bird image? At least one of circle/bird should be drawn.
+const showBird = true;
+
+// size of bird drawn (pixels)
+const birdRadius = 64;
+
+// draw a circle? Will be drawn behind bird
+const showCircle = true;
+
+// circle color, can be given as hex, e.g. "#00ff00"
+const circleColor = 'white';
+
+// background color, should be different than circle
+const backgroundColor = 'black';
+
+// velocity ranges for bird
+// randomly selected in this range
+const minVelocityX = 5;
+const maxVelocityX = 15;
+const minVelocityY = 5;
+const maxVelocityY = 10;
+
+// how far past the edge of the screen should the bird fly?
+// randomly selected
+const minDelay = 0;
+const maxDelay = 1000;
+
+// for console debugging (F12 in Firefox)
+const log = true;
+
+
+/* Code */
+
 // no padding
 document.body.style.margin = '0';
 document.body.style.padding = '0';
@@ -28,28 +66,10 @@ const ctx = canvas.getContext('2d');
 
 // Create image object
 const birdImage = new Image();
-birdImage.src = 'bird.png';
-
-// Options here
-const showCircle = true;
-const showBird = true;
-const birdRadius = 128;
-const circleColor = 'white';
+birdImage.src = birdSrc;
 
 
-// note: x, y are given from position of top corner of image
-let x = birdRadius; //-birdWidth;  // starting x position
-let y = birdRadius; // starting y position
-let dx = 0;  // x velocity
-let dy = 0;  // y velocity
-//const radius = 20;
-
-// Wait for the image to load before starting animation
-birdImage.onload = function() {
-    animate();
-};
-
-
+// draw circle, x, y are center of circle
 function drawCircle(ctx, x, y, radius=birdRadius, color=circleColor) {
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, 2 * Math.PI);
@@ -58,17 +78,58 @@ function drawCircle(ctx, x, y, radius=birdRadius, color=circleColor) {
     ctx.closePath()
 }
 
-// Correct position, so it's drawn with center at x, y
+// correct position, so it's drawn with center at x, y
 function drawBird(ctx, x, y, width=birdRadius*2, height=birdRadius*2) {
     ctx.drawImage(birdImage,
         x - width/2, y - height/2 ,
         width, height);
 }
 
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function randomBoolean() {
+    return Math.round(Math.random()) === 1
+}
+
+
+// Globals, but we're modifying state, so it seems fine
+var x;
+var y;
+var dx;
+var dy;
+var delay;
+
+function reset() {
+    // always start just off screen to the left
+    x = -birdRadius;
+
+    // start with random y position, bird fully in view
+    y = randomInt(birdRadius, canvas.height - birdRadius);
+
+    // random positive x velocity for bird
+    dx = randomInt(minVelocityX, maxVelocityX);
+
+    // random positive or negative y velocity
+    dy = randomInt(minVelocityY, maxVelocityY);
+    if (randomBoolean()) {
+        dy = -dy;
+    }
+    
+    // random delay
+    delay = randomInt(minDelay, maxDelay)
+    
+    if (log) {
+        console.log(`x: ${x}, y: ${y}, dx: ${dx}, dy: ${dy}, delay: ${delay}`);
+    }
+}
+
+
 function animate() {
-    // Clear the canvas
+    // clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (showCircle) {
@@ -79,37 +140,27 @@ function animate() {
         drawBird(ctx, x, y);
     }
 
-    // Bounce off floor
-    // TODO
+    // bounce off floor / ceiling
+    if (y - birdRadius > canvas.height || y < -birdRadius) {
+        dy = -dy
+    }
 
-    // Bounce off walls
-    //if (x + birdWidth > canvas.width || x < 0) {
-    //    dx = -dx;
-    //}
-    //if (y + birdHeight > canvas.height || y < 0) {
-    //    dy = -dy;
-    //}
-    
-    // Draw the circle
-    //ctx.beginPath();
-    //ctx.arc(x, y, radius, 0, Math.PI * 2);
-    //ctx.fillStyle = 'blue';
-    //ctx.fill();
-    //ctx.closePath();
-    
-    // Bounce off walls
-    //if (x + radius > canvas.width || x - radius < 0) {
-    //    dx = -dx;
-    //}
-    //if (y + radius > canvas.height || y - radius < 0) {
-    //    dy = -dy;
-    //}
-    
-    // Update position
+    // reset when bird is past the end
+    if (x > canvas.width + birdRadius + delay) {
+        reset()
+    }
+
+    // update position
     x += dx;
     y += dy;
     
-    // Call animate again
+    // call animate again
     requestAnimationFrame(animate);
 }
+
+// wait for the image to load before starting animation
+birdImage.onload = function() {
+    reset()
+    animate();
+};
 
